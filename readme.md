@@ -31,6 +31,38 @@ It stores moderation results, sends **alerts via email/Slack**, and provides ana
 
 ---
 
+## 🗂️ Setup Instructions
+
+1. **Clone the repository**
+    ```bash
+    git clone <repository_url>
+    cd <repository_name>
+
+2. **Install dependencies**
+    pip install -r requirement.txt
+
+3. **Create a .env file and set the environment variable**
+    # Database configuration
+    DATABASE_HOSTNAME=host
+    DATABASE_PORT=port
+    DATABASE_NAME=postgres
+    DATABASE_USERNAME=postgres
+    DATABASE_PASSWORD=your_password
+    # JWT Authentication
+    SECRET_KEY=your_secret_key
+    ALGORITHM=HS256
+    ACCESS_TOKEN_EXPIRY_MINUTES=your_token_expiry_time
+    # Perplexity AI
+    PERPLEXITY_API_KEY=your_api_key
+    # Slack Integration
+    SLACK_WEBHOOK_URL=your_slack_webhook_url
+    # Brevo
+    BREVO_API_KEY=your_brevo_api_key
+    BREVO_SENDER_EMAIL=your_sender_email
+
+3. **Run the application**
+    uvicorn app.main:app --reload --port 8000
+
 ## 🗂️ Project Structure
 
 app/
