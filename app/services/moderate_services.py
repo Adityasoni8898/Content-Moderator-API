@@ -8,18 +8,34 @@ from .. import models
 
 client = Perplexity(api_key=config.settings.perplexity_api_key)
 
-def handle_text_moderation(text, db, current_user):
-    content_hash = security.hash_content(text.encode())
-
+def create_text_request(text, db, user):
     request = models.ModerationRequest(
-        user_email=current_user.email,
+        user_email=user.email,
         content_type="text",
-        content_hash=content_hash,
+        content_hash=security.hash_content(text.encode()),
         status="pending"
     )
     db.add(request)
     db.commit()
     db.refresh(request)
+    return request
+
+
+async def create_image_request(image, db, user):
+    content_bytes = await image.read()
+    request = models.ModerationRequest(
+        user_email=user.email,
+        content_type="image",
+        content_hash=security.hash_content(content_bytes),
+        status="pending"
+    )
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+def handle_text_moderation(request_id, text, db, current_user):
 
     try:
         system_prompt = """You are a strict content moderation model.
@@ -45,7 +61,6 @@ def handle_text_moderation(text, db, current_user):
 
         llm_response = completion.choices[0].message.content.strip()
 
-        
         json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
         if json_match:
             result = json.loads(json_match.group(0))
@@ -66,10 +81,13 @@ def handle_text_moderation(text, db, current_user):
         confidence = 0.0
 
 
+    request = db.query(models.ModerationRequest).get(request_id)
+    content_hash = request.content_hash
+
     result = models.ModerationResult(
-        request_id=request.id,
+        request_id=request_id,
         classification=classification,
-        confidence=str(confidence),
+        confidence=confidence,
         reasoning=reasoning,
         llm_response=llm_response
     )
@@ -79,7 +97,6 @@ def handle_text_moderation(text, db, current_user):
 
     request.status = "completed"
     db.commit()
-    db.refresh(request)
 
     if flagged:
         alerts.send_alert(
@@ -88,41 +105,23 @@ def handle_text_moderation(text, db, current_user):
             content_hash=content_hash,
             llm_response=llm_response
         )
-        status = "success"
         notification_log = models.NotificationLog(
-            request_id=request.id,
+            request_id=request_id,
             channel="email and slack",
-            status=status
+            status="success"
         )
         db.add(notification_log)
         db.commit()
-        db.refresh(notification_log)
 
     return {
-        "request_id": request.id,
+        "request_id": request_id,
         "classification": classification,
         "confidence": confidence,
         "reasoning": reasoning
     }
 
 
-async def handle_image_moderation(image, db, current_user):
-    content_bytes = await image.read()
-    content_hash = security.hash_content(content_bytes)
-
-    request = models.ModerationRequest(
-        user_email=current_user.email,
-        content_type="image",
-        content_hash=content_hash,
-        status="pending"
-    )
-    db.add(request)
-    db.commit()
-    db.refresh(request)
-
-    base64_image = base64.b64encode(content_bytes).decode("utf-8")
-    image_data_uri = f"data:{image.content_type};base64,{base64_image}"
-
+async def handle_image_moderation(request_id, image_data_uri, db, current_user):
     try:
         system_prompt = """You are a strict image moderation model.
         Classify the given image into one of these categories:
@@ -150,116 +149,8 @@ async def handle_image_moderation(image, db, current_user):
             ],
             temperature=0
         )
-        json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
-        if json_match:
-            result = json.loads(json_match.group(0))
-            classification = result.get("classification", "SAFE").upper()
-            reasoning = result.get("reasoning", "No reasoning provided")
-            confidence = float(result.get("confidence", 0.9))
-        else:
-            classification = "SAFE"
-            reasoning = "Unstructured LLM response"
-            confidence = 0.5
-
-        flagged = classification == "INAPPROPRIATE"
-
-    except Exception as e:
-        llm_response = f"Error during moderation: {str(e)}"
-        classification = "SAFE"
-        reasoning = "Moderation failed, defaulting to safe"
-        confidence = 0.0
-        flagged = False
-
-    classification = "INAPPROPRIATE" if flagged else "SAFE"
-
-    result = models.ModerationResult(
-        request_id=request.id,
-        classification=classification,
-        confidence=confidence,
-        reasoning=reasoning,
-        llm_response=llm_response
-    )
-    db.add(result)
-
-    if flagged:
-        alerts.send_alert(
-            user_email=current_user.email,
-            content_type="image",
-            content_hash=content_hash,
-            llm_response=llm_response
-        )
-        status = "success"
-        notification_log = models.NotificationLog(
-            request_id=request.id,
-            channel="email and slack",
-            status=status
-        )
-        db.add(notification_log)
-        db.commit()
-        db.refresh(notification_log)
-
-    request.status = "completed"
-    db.commit()
-    db.refresh(request)
-
-    return {
-        "request_id": request.id,
-        "classification": classification,
-        "confidence": "0.9",
-        "llm_response": llm_response
-    }
-    # Read and hash image
-    content_bytes = await image.read()
-    content_hash = security.hash_content(content_bytes)
-
-    # Create moderation request entry
-    request = models.ModerationRequest(
-        user_email=current_user.email,
-        content_type="image",
-        content_hash=content_hash,
-        status="pending"
-    )
-    db.add(request)
-    db.commit()
-    db.refresh(request)
-
-    # Convert image to data URI
-    base64_image = base64.b64encode(content_bytes).decode("utf-8")
-    image_data_uri = f"data:{image.content_type};base64,{base64_image}"
-
-    try:
-        # Force structured, JSON-only response
-        system_prompt = """You are a strict image moderation model.
-Classify the given image into one of these categories:
-- SAFE: No nudity, sexual, violent, hateful, or NSFW content.
-- INAPPROPRIATE: Contains or implies any NSFW, sexual, violent, or hateful elements.
-
-Respond in strict JSON only:
-{
-  "classification": "SAFE" | "INAPPROPRIATE",
-  "reasoning": "short explanation",
-  "confidence": float between 0 and 1
-}
-"""
-
-        completion = client.chat.completions.create(
-            model="sonar-pro",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Analyze this image for inappropriate or NSFW content."},
-                        {"type": "image_url", "image_url": {"url": image_data_uri}}
-                    ]
-                }
-            ],
-            temperature=0
-        )
-
         llm_response = completion.choices[0].message.content.strip()
 
-        # Parse structured JSON safely
         json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
         if json_match:
             result = json.loads(json_match.group(0))
@@ -280,9 +171,11 @@ Respond in strict JSON only:
         confidence = 0.0
         flagged = False
 
-    # Save moderation result
+    request = db.query(models.ModerationRequest).get(request_id)
+    content_hash = request.content_hash
+
     result = models.ModerationResult(
-        request_id=request.id,
+        request_id=request_id,
         classification=classification,
         confidence=confidence,
         reasoning=reasoning,
@@ -290,7 +183,6 @@ Respond in strict JSON only:
     )
     db.add(result)
 
-    # Handle flagged cases (alert + notification)
     if flagged:
         alerts.send_alert(
             user_email=current_user.email,
@@ -299,19 +191,17 @@ Respond in strict JSON only:
             llm_response=llm_response
         )
         notification_log = models.NotificationLog(
-            request_id=request.id,
+            request_id=request_id,
             channel="email and slack",
             status="success"
         )
         db.add(notification_log)
 
-    # Mark request complete
     request.status = "completed"
     db.commit()
-    db.refresh(request)
 
     return {
-        "request_id": request.id,
+        "request_id": request_id,
         "classification": classification,
         "confidence": confidence,
         "reasoning": reasoning,
