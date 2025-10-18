@@ -1,12 +1,13 @@
 import base64
 from perplexity import Perplexity
-from app import config, utils
+from app import config
+from ..utils import security, alerts
 from .. import models
 
 client = Perplexity(api_key=config.settings.perplexity_api_key)
 
 def handle_text_moderation(text, db, current_user):
-    content_hash = utils.hash_content(text.encode())
+    content_hash = security.hash_content(text.encode())
 
     request = models.ModerationRequest(
         user_email=current_user.email,
@@ -63,7 +64,7 @@ def handle_text_moderation(text, db, current_user):
     db.refresh(request)
 
     if flagged:
-        utils.send_alert(
+        alerts.send_alert(
             user_email=current_user.email,
             content_type="text",
             content_hash=content_hash,
@@ -88,8 +89,8 @@ def handle_text_moderation(text, db, current_user):
 
 
 async def handle_image_moderation(image, db, current_user):
-    content_bytes = await image.file.read()
-    content_hash = utils.hash_content(content_bytes)
+    content_bytes = await image.read()
+    content_hash = security.hash_content(content_bytes)
 
     request = models.ModerationRequest(
         user_email=current_user.email,
@@ -135,7 +136,7 @@ async def handle_image_moderation(image, db, current_user):
     db.add(result)
 
     if flagged:
-        utils.send_alert(
+        alerts.send_alert(
             user_email=current_user.email,
             content_type="image",
             content_hash=content_hash,

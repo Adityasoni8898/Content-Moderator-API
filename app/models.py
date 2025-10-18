@@ -1,5 +1,5 @@
 from .database import Base
-from sqlalchemy import TIMESTAMP, Column, Float, ForeignKey, Integer, String, text
+from sqlalchemy import TIMESTAMP, Column, ForeignKey, Integer, String, text
 
 class User(Base):
     __tablename__ = "users"
@@ -22,7 +22,7 @@ class ModerationResult(Base):
     __tablename__ = "moderation_results"
     request_id = Column(Integer, ForeignKey("moderation_requests.id", ondelete="CASCADE"), primary_key=True)
     classification = Column(String, nullable=False)
-    confidence = Column(Float)
+    confidence = Column(String)
     reasoning = Column(String)
     llm_response = Column(String)
 

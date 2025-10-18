@@ -28,4 +28,4 @@ class TokenResponse(BaseModel):
     token_type: str
 
 class TokenPayload(BaseModel):
-    user_id: Optional[int] = None
+    id : Optional[int] = None
