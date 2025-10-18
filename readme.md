@@ -14,6 +14,7 @@ It stores moderation results, sends **alerts via email/Slack**, and provides ana
 - 🧾 **Database Storage** — Logs moderation results, user info, and notifications in PostgreSQL.  
 - 🔐 **JWT Authentication** — Only logged-in users can submit moderation requests.  
 - 📊 **Analytics Ready** — Stores detailed moderation logs for insights and dashboards.
+- ⚡ **Async Background Tasks** — Handles moderation and notifications asynchronously using FastAPI BackgroundTasks for improved performance and responsiveness.
 
 ---
 
@@ -60,20 +61,24 @@ It stores moderation results, sends **alerts via email/Slack**, and provides ana
 
 ## 🗂️ Project Structure
 
-app/
-│
-├── main.py            # FastAPI entry point<br>
-├── database.py        # Database setup and session management<br>
-├── models.py          # SQLAlchemy models<br>
-├── schemas.py         # Pydantic schemas<br>
-├── oauth2.py          # JWT token and authentication logic<br>
-├── utils.py           # Helper functions<br>
-├── routers/
-│   ├── auth.py        # User login<br>
-│   ├── moderation.py  # Text & Image moderation<br>
-│   └── analytics.py   # Analytics and reporting<br>
-│   └── users.py       # User signup<br>
-└── .env               # Environment variables<br>
+app/<br>
+│<br>
+├── main.py                   # FastAPI entry point<br>
+├── database.py               # Database setup and session management<br>
+├── models.py                 # SQLAlchemy models<br>
+├── schemas.py                # Pydantic schemas<br>
+├── routers/ <br>
+│   ├── auth.py               # User login<br>
+│   ├── moderation.py         # Text & Image moderation<br>
+│   └── analytics.py          # Analytics and reporting<br>
+│   └── users.py              # User signup<br>
+├── utils/ <br>
+│   ├── alerts.py             # handle sending inappropriate content alert<br>
+│   ├── oauth2.py             # JWT token and authentication logic<br>
+│   └── security.py           # Password hashing and verifying logic <br>
+├── services/<br>
+│   ├── moderate_services.py  # handle text & image moderation <br>
+└── .env                      # Environment variables<br>
 
 ## 🧑‍💻 API Overview
 
