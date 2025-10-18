@@ -8,14 +8,6 @@ router = APIRouter(
     tags=['User']
 )
 
-# (used for testing)
-# @router.get("/", response_model=List[schemas.UserResponse])
-# def get_all_user(db: Session = Depends(get_db)):
-    
-#     users = db.query(models.User).all()
-
-#     return users
-
 @router.post("/",  status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse)
 async def create_user(user: schemas.CreateUser, db: Session = Depends(get_db)):
     

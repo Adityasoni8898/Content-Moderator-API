@@ -30,12 +30,12 @@ def analytics_summary(
 
     safe_count = db.query(func.count(models.ModerationResult.request_id))\
                    .join(models.ModerationRequest, models.ModerationResult.request_id == models.ModerationRequest.id)\
-                   .filter(models.ModerationRequest.user_email == user, models.ModerationResult.classification == "safe")\
+                   .filter(models.ModerationRequest.user_email == user, models.ModerationResult.classification == "SAFE")\
                    .scalar()
 
     inappropriate_count = db.query(func.count(models.ModerationResult.request_id))\
                             .join(models.ModerationRequest, models.ModerationResult.request_id == models.ModerationRequest.id)\
-                            .filter(models.ModerationRequest.user_email == user, models.ModerationResult.classification == "inappropriate")\
+                            .filter(models.ModerationRequest.user_email == user, models.ModerationResult.classification == "INAPPROPRIATE")\
                             .scalar()
 
     return {

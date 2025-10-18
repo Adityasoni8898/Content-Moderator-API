@@ -1,4 +1,6 @@
 import base64
+import re
+import json
 from perplexity import Perplexity
 from app import config
 from ..utils import security, alerts
@@ -20,33 +22,49 @@ def handle_text_moderation(text, db, current_user):
     db.refresh(request)
 
     try:
+        system_prompt = """You are a strict content moderation model.
+        Classify the following text into one of the categories:
+        - SAFE: No sexual, violent, hateful, or inappropriate content.
+        - INAPPROPRIATE: Contains or implies NSFW, sexual, hateful, or violent content.
+
+        Respond in strict JSON only:
+        {
+        "classification": "SAFE" | "INAPPROPRIATE",
+        "reasoning": "short reason",
+        "confidence": float between 0 and 1
+        }
+        """
         completion = client.chat.completions.create(
             model="sonar-pro",
-            messages=[{"role": "user", "content": f"Moderate this text for inappropriate content: {text}"}]
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text}
+            ],
+            temperature=0
         )
-        llm_response = completion.choices[0].message.content.lower()
 
-        if any(word in llm_response for word in ["appropriate", "safe", "no issues", "not contain inappropriate"]):
-            flagged = False
-            classification = "safe"
-            reasoning = "No issues detected"
-            confidence = 0.9
-        elif "inappropriate" in llm_response or "nsfw" in llm_response:
-            flagged = True
-            classification = "inappropriate"
-            reasoning = "Detected inappropriate content"
-            confidence = 0.9
+        llm_response = completion.choices[0].message.content.strip()
+
+        
+        json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group(0))
+            classification = result.get("classification", "SAFE").upper()
+            reasoning = result.get("reasoning", "No reasoning provided")
+            confidence = float(result.get("confidence", 0.9))
         else:
-            flagged = False
-            classification = "safe"
-            reasoning = "LLM response unclear, defaulting to safe"
+            classification = "SAFE"
+            reasoning = "LLM returned unstructured response"
             confidence = 0.5
+
+        flagged = classification == "INAPPROPRIATE"
+
     except Exception as e:
-        llm_response = f"Error calling Perplexity API: {str(e)}"
         flagged = False
-        classification = "safe"
-        reasoning = "LLM moderation failed"
+        classification = "SAFE"
+        reasoning = f"Moderation failed: {e}"
         confidence = 0.0
+
 
     result = models.ModerationResult(
         request_id=request.id,
@@ -106,31 +124,59 @@ async def handle_image_moderation(image, db, current_user):
     image_data_uri = f"data:{image.content_type};base64,{base64_image}"
 
     try:
+        system_prompt = """You are a strict image moderation model.
+        Classify the given image into one of these categories:
+        - SAFE: No nudity, sexual, violent, hateful, or NSFW content.
+        - INAPPROPRIATE: Contains or implies any NSFW, sexual, violent, or hateful elements.
+
+        Respond in strict JSON only:
+        {
+        "classification": "SAFE" | "INAPPROPRIATE",
+        "reasoning": "short explanation",
+        "confidence": float between 0 and 1
+        }
+        """
         completion = client.chat.completions.create(
             model="sonar-pro",
             messages=[
+                {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Moderate this image for inappropriate content."},
+                        {"type": "text", "text": "Analyze this image for inappropriate or NSFW content."},
                         {"type": "image_url", "image_url": {"url": image_data_uri}}
                     ]
                 }
-            ]
+            ],
+            temperature=0
         )
-        llm_response = completion.choices[0].message.content
-        flagged = "inappropriate" in llm_response.lower()
+        json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group(0))
+            classification = result.get("classification", "SAFE").upper()
+            reasoning = result.get("reasoning", "No reasoning provided")
+            confidence = float(result.get("confidence", 0.9))
+        else:
+            classification = "SAFE"
+            reasoning = "Unstructured LLM response"
+            confidence = 0.5
+
+        flagged = classification == "INAPPROPRIATE"
+
     except Exception as e:
-        llm_response = str(e)
+        llm_response = f"Error during moderation: {str(e)}"
+        classification = "SAFE"
+        reasoning = "Moderation failed, defaulting to safe"
+        confidence = 0.0
         flagged = False
 
-    classification = "inappropriate" if flagged else "safe"
+    classification = "INAPPROPRIATE" if flagged else "SAFE"
 
     result = models.ModerationResult(
         request_id=request.id,
         classification=classification,
-        confidence="0.9",
-        reasoning="Detected inappropriate content" if flagged else "No issues detected",
+        confidence=confidence,
+        reasoning=reasoning,
         llm_response=llm_response
     )
     db.add(result)
@@ -160,5 +206,114 @@ async def handle_image_moderation(image, db, current_user):
         "request_id": request.id,
         "classification": classification,
         "confidence": "0.9",
+        "llm_response": llm_response
+    }
+    # Read and hash image
+    content_bytes = await image.read()
+    content_hash = security.hash_content(content_bytes)
+
+    # Create moderation request entry
+    request = models.ModerationRequest(
+        user_email=current_user.email,
+        content_type="image",
+        content_hash=content_hash,
+        status="pending"
+    )
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+
+    # Convert image to data URI
+    base64_image = base64.b64encode(content_bytes).decode("utf-8")
+    image_data_uri = f"data:{image.content_type};base64,{base64_image}"
+
+    try:
+        # Force structured, JSON-only response
+        system_prompt = """You are a strict image moderation model.
+Classify the given image into one of these categories:
+- SAFE: No nudity, sexual, violent, hateful, or NSFW content.
+- INAPPROPRIATE: Contains or implies any NSFW, sexual, violent, or hateful elements.
+
+Respond in strict JSON only:
+{
+  "classification": "SAFE" | "INAPPROPRIATE",
+  "reasoning": "short explanation",
+  "confidence": float between 0 and 1
+}
+"""
+
+        completion = client.chat.completions.create(
+            model="sonar-pro",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Analyze this image for inappropriate or NSFW content."},
+                        {"type": "image_url", "image_url": {"url": image_data_uri}}
+                    ]
+                }
+            ],
+            temperature=0
+        )
+
+        llm_response = completion.choices[0].message.content.strip()
+
+        # Parse structured JSON safely
+        json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group(0))
+            classification = result.get("classification", "SAFE").upper()
+            reasoning = result.get("reasoning", "No reasoning provided")
+            confidence = float(result.get("confidence", 0.9))
+        else:
+            classification = "SAFE"
+            reasoning = "Unstructured LLM response"
+            confidence = 0.5
+
+        flagged = classification == "INAPPROPRIATE"
+
+    except Exception as e:
+        llm_response = f"Error during moderation: {str(e)}"
+        classification = "SAFE"
+        reasoning = "Moderation failed, defaulting to safe"
+        confidence = 0.0
+        flagged = False
+
+    # Save moderation result
+    result = models.ModerationResult(
+        request_id=request.id,
+        classification=classification,
+        confidence=confidence,
+        reasoning=reasoning,
+        llm_response=llm_response
+    )
+    db.add(result)
+
+    # Handle flagged cases (alert + notification)
+    if flagged:
+        alerts.send_alert(
+            user_email=current_user.email,
+            content_type="image",
+            content_hash=content_hash,
+            llm_response=llm_response
+        )
+        notification_log = models.NotificationLog(
+            request_id=request.id,
+            channel="email and slack",
+            status="success"
+        )
+        db.add(notification_log)
+
+    # Mark request complete
+    request.status = "completed"
+    db.commit()
+    db.refresh(request)
+
+    return {
+        "request_id": request.id,
+        "classification": classification,
+        "confidence": confidence,
+        "reasoning": reasoning,
         "llm_response": llm_response
     }

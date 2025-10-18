@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import utils
 from .routers import users, auth, moderate, analytics
 
 app = FastAPI()
