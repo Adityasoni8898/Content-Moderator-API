@@ -35,18 +35,18 @@ It stores moderation results, sends **alerts via email/Slack**, and provides ana
 
 app/
 │
-├── main.py                    # FastAPI entry point
-├── database.py                # Database setup and session management
-├── models.py                  # SQLAlchemy models
-├── schemas.py                 # Pydantic schemas
-├── oauth2.py                  # JWT token and authentication logic
-├── utils.py                   # Helper functions (hashing, alerts, etc.)
+├── main.py            # FastAPI entry point<br>
+├── database.py        # Database setup and session management<br>
+├── models.py          # SQLAlchemy models<br>
+├── schemas.py         # Pydantic schemas<br>
+├── oauth2.py          # JWT token and authentication logic<br>
+├── utils.py           # Helper functions<br>
 ├── routers/
-│   ├── auth.py                # User login
-│   ├── moderation.py          # Text/Image moderation routes
-│   └── analytics.py           # Analytics and reporting
-│   └── users.py               # User signup
-└── .env                       # Environment variables
+│   ├── auth.py        # User login<br>
+│   ├── moderation.py  # Text & Image moderation<br>
+│   └── analytics.py   # Analytics and reporting<br>
+│   └── users.py       # User signup<br>
+└── .env               # Environment variables<br>
 
 ## 🧑‍💻 API Overview
 
