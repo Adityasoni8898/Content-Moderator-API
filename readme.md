@@ -319,3 +319,8 @@ When a piece of content is flagged as inappropriate, the system performs the fol
 3. 🧾 Database Log — Creates an entry in the notification_logs table for tracking.
 
 ---
+### Output Images
+![](output_images/1_api_call.png)
+![](output_images/2_api_call.png)
+![](output_images/3_slack_alert.png)
+![](output_images/4_email_alert.png)
