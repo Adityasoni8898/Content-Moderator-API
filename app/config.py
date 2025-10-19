@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 import os
 
-DOTENV = os.path.join(os.path.dirname(__file__), ".env")
+DOTENV = os.path.join(os.path.dirname(__file__), "../.env")
 
 class Settings(BaseSettings):
     database_hostname: str
