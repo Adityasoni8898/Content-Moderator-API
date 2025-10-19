@@ -23,7 +23,7 @@ It stores moderation results, sends **alerts via email/Slack**, and provides ana
 
 - 📨 **Email Alerts** — Sends alert notifications through **Brevo (Sendinblue)** when flagged content is detected.
 
-- 💬 **Slack Notifications** — Optional real-time alerts to a Slack channel.
+- 💬 **Slack Notifications** — Real-time alerts to a Slack channel.
 
 - 🧾 **Database Storage** — Logs moderation results, user info, and notifications in PostgreSQL.
 
@@ -40,82 +40,56 @@ It stores moderation results, sends **alerts via email/Slack**, and provides ana
   
 
 ## 🏗️ Tech Stack
-
-  
-
 | Layer | Technology |
-
-|-------|-------------|
-
-| Backend | [FastAPI] |
-
-| Database | [PostgreSQL] |
-
-| ORM | [SQLAlchemy]|
-
-| Schema Validation | [Pydantic]|
-
+|---|---|
+| Backend | FastAPI |
+| Database | PostgreSQL |
+| ORM | SQLAlchemy |
+| Schema Validation | Pydantic |
 | Authentication | JWT (JSON Web Tokens) |
-
 | Notifications | Brevo API & Slack Webhooks |
-
 | AI Model | Sonar-Pro (Perplexity API) |
-
-  
-
 ---
 
   
-
 ## 🗂️ Setup Locally
 
   
 
 1.  **Clone the repository**
 
-git clone <https://github.com/Adityasoni8898/Content-Moderator-API.git> <br>
+	git clone <https://github.com/Adityasoni8898/Content-Moderator-API.git> <br>
 
-cd Content-Moderator-API/
+	cd Content-Moderator-API/
 
   <br>
 
 2.  **Install dependencies**
 
-pip install -r requirement.txt
+	pip install -r requirement.txt
 
   <br>
 
 3.  **Create a .env file and set the environment variable**
 
-DATABASE_HOSTNAME=host <br>
-
-DATABASE_PORT=port <br>
-
-DATABASE_NAME=postgres<br>
-
-DATABASE_USERNAME=postgres<br>
-
-DATABASE_PASSWORD=your_password<br>
-
-SECRET_KEY=your_secret_key<br>
-
-ALGORITHM=HS256<br>
-
-ACCESS_TOKEN_EXPIRY_MINUTES=your_token_expiry_time<br>
-
-PERPLEXITY_API_KEY=your_api_key<br>
-
-SLACK_WEBHOOK_URL=your_slack_webhook_url<br>
-
-BREVO_API_KEY=your_brevo_api_key<br>
-
-BREVO_SENDER_EMAIL=your_sender_email<br>
+	DATABASE_HOSTNAME=host
+	DATABASE_PORT=port
+	DATABASE_NAME=postgres
+	DATABASE_USERNAME=postgres
+	DATABASE_PASSWORD=your_password
+	SECRET_KEY=your_secret_key
+	ALGORITHM=HS256
+	ACCESS_TOKEN_EXPIRY_MINUTES=your_token_expiry_time
+    PERPLEXITY_API_KEY=your_api_key
+    SLACK_WEBHOOK_URL=your_slack_webhook_url
+    BREVO_API_KEY=your_brevo_api_key
+    BREVO_SENDER_EMAIL=your_sender_email
 
   
 <br>
 4.  **Run the application**
 
-uvicorn app.main:app --reload --port 8000
+	uvicorn app.main:app --reload --port 8000
 
 
 ---
@@ -127,52 +101,32 @@ uvicorn app.main:app --reload --port 8000
   
 
 1.  **Clone the repository**
+    git clone <https://github.com/Adityasoni8898/Content-Moderator-API.git>
+    cd Content-Moderator-API/
 
-git clone <https://github.com/Adityasoni8898/Content-Moderator-API.git>
-
-cd Content-Moderator-API/
-
-  <br>
 
 2.  **Create a .env file and set the environment variable**
-
-DATABASE_HOSTNAME=host <br>
-
-DATABASE_PORT=port <br>
-
-DATABASE_NAME=postgres<br>
-
-DATABASE_USERNAME=postgres<br>
-
-DATABASE_PASSWORD=your_password<br>
-
-SECRET_KEY=your_secret_key<br>
-
-ALGORITHM=HS256<br>
-
-ACCESS_TOKEN_EXPIRY_MINUTES=your_token_expiry_time<br>
-
-PERPLEXITY_API_KEY=your_api_key<br>
-
-SLACK_WEBHOOK_URL=your_slack_webhook_url<br>
-
-BREVO_API_KEY=your_brevo_api_key<br>
-
-BREVO_SENDER_EMAIL=your_sender_email<br><br>
+    DATABASE_HOSTNAME=host 
+    DATABASE_PORT=port
+    DATABASE_NAME=postgres  
+    DATABASE_USERNAME=postgres
+    DATABASE_PASSWORD=your_password
+    SECRET_KEY=your_secret_key
+    ALGORITHM=algo
+    ACCESS_TOKEN_EXPIRY_MINUTES=your_token_expiry_time
+    PERPLEXITY_API_KEY=your_api_key
+    SLACK_WEBHOOK_URL=your_slack_webhook_url
+    BREVO_API_KEY=your_brevo_api_key
+    BREVO_SENDER_EMAIL=your_sender_email<br><br>
 
   
 
 3.  **Build and Run the Docker Container**
-
 docker-compose up --build -d
 
-  
-
 4.  **Access the API**
+    `http://localhost:8000/api/v1`
 
-http://localhost:8000/api/v1
-
-  <br>
 
 ## 🗂️ Project Structure
 
@@ -320,7 +274,7 @@ When a piece of content is flagged as inappropriate, the system performs the fol
 
 ---
 ### Output Images
-![](output_images/1_api_call.png)
-![](output_images/2_api_call.png)
-![](output_images/3_slack_alert.png)
-![](output_images/4_email_alert.png)
+![](output_images/1_api_call.png) <br>
+![](output_images/2_api_call.png) <br>
+![](output_images/3_slack_alert.png) <br>
+![](output_images/4_email_alert.png) 
